@@ -56,5 +56,5 @@ export const getApp = async ({ logger }: { logger: Logger }): Promise<FastifyIns
 
   endpoints.forEach(endpoint => registerEndpoint(app, endpoint));
 
-  return app;
+  return Promise.resolve(app);
 };
