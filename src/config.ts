@@ -25,6 +25,12 @@ const configObject = convict({
     default: 'debug',
     env: 'LOG_LEVEL',
   },
+  databaseURL: {
+    doc: 'The connection string of the database',
+    format: String,
+    default: 'postgresql://user:password@localhost:5432/db',
+    env: 'DATABASE_URL',
+  },
 });
 
 configObject.validate({ allowed: 'warn' });
