@@ -1,1 +1,1 @@
-DROP TYPE templates;
+DROP TYPE images;

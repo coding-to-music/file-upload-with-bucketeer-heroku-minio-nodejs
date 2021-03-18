@@ -1,60 +1,93 @@
-import fastify, { FastifyInstance } from 'fastify';
-import oas from 'fastify-oas';
-import { description, name, version } from '../package.json';
-import { config } from './config';
+import * as AWS from 'aws-sdk';
+import { OpenAPIV3 } from 'openapi-types';
+import { Pool } from 'pg';
+import { version } from '../package.json';
+import { Config } from './config';
+import { queryServiceFactory } from './database/run-query-service';
 import { Endpoint } from './domain/endpoint/endpoint';
-import { registerEndpoint } from './domain/endpoint/endpoint-register-fastify';
-import { errorHandlerFactory } from './domain/error/error-handler';
-import { errorHandlerMWFastifyFactory } from './domain/error/error-handling-mw-fastify';
-import { errorMapper } from './domain/error/error-mapper';
 import { Logger } from './domain/logger/logger';
+import { statusOATag } from './domain/oa-tag/status.oa-tag';
+import { sqlTransactionServiceFactory } from './domain/transaction/sql-transaction-service';
 import { statusEndpointFactory } from './endpoint/get-status-endpoint';
+import { errorHandlerFactory } from './framework/error/error-handler';
+import { errorMapper } from './framework/error/error-mapper';
+import { fastifyServerFactory } from './framework/fastify/fastify-server.factory';
+import { fastifySwaggerFactory } from './framework/fastify/fastify-swagger.factory';
+import { gracefulWrapperHTTPFactory, stopGracefully } from './framework/graceful/graceful-stop';
+import { s3ServiceS3Factory } from './framework/storage/storage-service-s3';
 
-export const getApp = async ({ logger }: { logger: Logger }): Promise<FastifyInstance> => {
-  const app = fastify({
-    logger,
+export const start = async ({ config, logger }: { config: Config; logger: Logger }): Promise<void> => {
+  const pool = new Pool({
+    connectionString: config.database.url,
+    ...(config.database.databaseUseSSL ? { ssl: { requestCert: true, rejectUnauthorized: false } } : {}),
   });
-  const errorHandler = errorHandlerFactory({ logger, errorMapper });
+  const sqlTransactionService = sqlTransactionServiceFactory({ pool });
+  const queryService = queryServiceFactory({ sqlTransactionService });
 
-  app.register(oas, {
-    routePrefix: '/documentation',
-    addModels: true,
-    exposeRoute: config.documentationEnabled,
-    swagger: {
-      info: {
-        title: name,
-        version,
-        description,
-      },
-      externalDocs: {
-        url: 'https://swagger.io',
-        description: 'Find more info here',
-      },
-      securitySchemes: {
-        bearerToken: {
-          type: 'http',
-          scheme: 'bearer',
-        },
-      },
-      consumes: ['application/json'],
-      produces: ['application/json'],
-    },
+  AWS.config.update({
+    accessKeyId: config.storage.accessKeyId,
+    secretAccessKey: config.storage.secretAccessKey,
+    region: config.storage.region,
   });
-  app.ready(err => {
-    if (err) {
-      throw err;
-    }
-    app.oas();
-  });
-  app.setErrorHandler(errorHandlerMWFastifyFactory({ errorHandler }));
-  app.setNotFoundHandler((_, resp) => resp.status(404).send({ errorCode: 'NOT_FOUND' }));
+
+  const s3 = new AWS.S3();
+
+  const storageService = s3ServiceS3Factory({ s3, urlExpirationSeconds: config.aws.urlExpirationSeconds });
+  await storageService.createPublicBucketIfNotExists(config.storage.bucketName);
 
   const statusEndpoint = statusEndpointFactory({ version });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const endpoints: Endpoint<any, any, any, any>[] = [statusEndpoint];
+  const endpoints = [statusEndpoint];
 
-  endpoints.forEach(endpoint => registerEndpoint(app, endpoint));
+  const securityRequirementObjects: OpenAPIV3.SecurityRequirementObject[] = [
+    {
+      bearerToken: [],
+    },
+  ];
 
-  return Promise.resolve(app);
+  const components: OpenAPIV3.ComponentsObject = {
+    schemas: {},
+    securitySchemes: {
+      bearerToken: {
+        type: 'http',
+        scheme: 'bearer',
+      },
+    },
+  };
+
+  const tags = [statusOATag];
+
+  const swaggerOptions = fastifySwaggerFactory({
+    tags,
+    components,
+    security: securityRequirementObjects,
+    host: config.domainSwagger,
+  });
+
+  const server = await fastifyServerFactory({
+    swaggerOptions,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    endpoints: (endpoints as unknown) as Endpoint[],
+    logger,
+    allowedOrigins: [],
+    errorHandler: errorHandlerFactory({
+      logger,
+      errorMapper: errorMapper,
+    }),
+  });
+
+  await server.listen(config.port, '0.0.0.0');
+  logger.info(`app listening on port ${config.port}`);
+  await server.oas();
+
+  const gracefulHTTP = gracefulWrapperHTTPFactory(server.server, 1000);
+  stopGracefully({
+    gracefulWrappers: [gracefulHTTP],
+    processSignals: ['SIGINT', 'SIGTERM'],
+    timeout: 3000,
+    onShutdownStart: () => logger.info('shutting down gracefully'),
+    onShutdownGracefulFail: () => logger.fatal('could not shut down gracefully'),
+    onShutdownGracefulSuccess: () => logger.info('shut down gracefully'),
+  });
 };

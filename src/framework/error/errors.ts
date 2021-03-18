@@ -1,17 +1,19 @@
+import { ValidationResult } from 'fastify-error';
 import { DetailedError } from './detailed-error';
+import { ErrorCode } from './error-code';
 
 export class Unauthorized extends Error {
   constructor() {
-    super('UNAUTHORIZED');
+    super(ErrorCode.UNAUTHORIZED);
   }
 }
 
 export class NotFoundError extends DetailedError {
   constructor(private entityName: string) {
-    super('NOT_FOUND');
+    super(ErrorCode.NOT_FOUND);
   }
 
-  getDetails(): object {
+  getDetails(): Record<string, unknown> {
     return {
       entityName: this.entityName,
     };
@@ -19,11 +21,11 @@ export class NotFoundError extends DetailedError {
 }
 
 export class ValidationError extends DetailedError {
-  constructor(private errors: object) {
-    super('VALIDATION_ERROR');
+  constructor(private errors: ValidationResult[]) {
+    super(ErrorCode.VALIDATION_ERROR);
   }
 
-  getDetails(): object {
+  getDetails(): Record<string, unknown> {
     return { errors: this.errors };
   }
 }

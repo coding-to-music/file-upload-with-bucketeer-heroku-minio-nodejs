@@ -7,6 +7,12 @@ const configObject = convict({
     default: 1337,
     env: 'PORT',
   },
+  domainSwagger: {
+    doc: 'Domain name for swagger.',
+    format: String,
+    default: 'localhost:3000',
+    env: 'APP_DOMAIN_SWAGGER',
+  },
   host: {
     doc: 'The application host',
     format: String,

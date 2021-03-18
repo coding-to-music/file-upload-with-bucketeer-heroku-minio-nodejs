@@ -1,11 +1,11 @@
-import { DetailedError } from '../error/detailed-error';
+import { DetailedError } from '../../framework/error/detailed-error';
 
 export class TransactionAlreadyCommittedError extends DetailedError {
   constructor(private id: string) {
     super('Transaction already committed');
   }
 
-  getDetails(): object {
+  getDetails(): Record<string, unknown> {
     return { id: this.id };
   }
 }
@@ -15,7 +15,7 @@ export class TransactionAlreadyRollbackedError extends DetailedError {
     super('Transaction already rollbacked');
   }
 
-  getDetails(): object {
+  getDetails(): Record<string, unknown> {
     return { id: this.id };
   }
 }

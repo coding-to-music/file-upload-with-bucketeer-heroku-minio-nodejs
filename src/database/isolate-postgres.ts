@@ -1,8 +1,10 @@
+import { join } from 'path';
 import { Pool, PoolClient } from 'pg';
-import { parse as pgConnectionString } from 'pg-connection-string';
+import { parse } from 'pg-connection-string';
 import pgDatabaseUrl from 'pg-database-url';
 import { v4 } from 'uuid';
 import { config } from '../config';
+import { loggerStubFactory } from '../framework/logger/logger-stub';
 import { migrate } from './migrate';
 
 interface PostgresIsolation {
@@ -13,7 +15,10 @@ interface PostgresIsolation {
 }
 
 const createIsolation = async (): Promise<PostgresIsolation> => {
-  const rootPool = new Pool({ connectionString: config.databaseURL });
+  const rootPool = new Pool({
+    connectionString: config.database.url,
+    ...(config.database.databaseUseSSL ? { ssl: true } : {}),
+  });
   const rootPoolClient = await rootPool.connect();
   const runQuery = async (query: string): Promise<void> => {
     await rootPoolClient.query(query);
@@ -29,9 +34,11 @@ const createIsolation = async (): Promise<PostgresIsolation> => {
     ALTER USER ${name} SET search_path to ${name};
   `);
 
-  const rootConnectionData = pgConnectionString(config.databaseURL);
+  const rootConnectionData = parse(config.database.url);
   const dbConnectionString = pgDatabaseUrl({
-    ...rootConnectionData,
+    host: rootConnectionData.host || 'localhost',
+    port: rootConnectionData.port || '5432',
+    database: rootConnectionData.database || 'db',
     password,
     username: name,
   });
@@ -64,11 +71,11 @@ export const withIsolatedDB = (opts: { migrate: boolean }): { getIsolation: () =
       isolation = await createIsolation();
       if (opts.migrate) {
         await migrate({
-          dbConnectionString: isolation.dbConnectionString,
+          connectionString: isolation.dbConnectionString,
           drop: false,
-          // eslint-disable-next-line @typescript-eslint/no-empty-function
-          log: () => {},
-          schema: isolation.name,
+          logger: loggerStubFactory(),
+          schemaName: isolation.name,
+          migrationDirectoryPath: join(__dirname, '../../migrations'),
         });
       }
       poolClient = await isolation.pool.connect();
@@ -93,3 +100,30 @@ export const withIsolatedDB = (opts: { migrate: boolean }): { getIsolation: () =
     getIsolation,
   };
 };
+
+export const itWithIsolatedDB = ({
+  name,
+  testExecutor,
+}: {
+  name: string;
+  testExecutor: (poolClient: Pool) => Promise<void>;
+}): void =>
+  it(name, async () => {
+    const isolation = await createIsolation();
+    await migrate({
+      connectionString: isolation.dbConnectionString,
+      drop: false,
+      logger: loggerStubFactory(),
+      schemaName: isolation.name,
+      migrationDirectoryPath: join(__dirname, '../../migrations'),
+    });
+
+    const poolClient = await isolation.pool.connect();
+
+    try {
+      await testExecutor(isolation.pool);
+    } finally {
+      poolClient.release();
+      await isolation.cleanup();
+    }
+  });

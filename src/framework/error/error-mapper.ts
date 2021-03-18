@@ -1,12 +1,12 @@
 import { DetailedError, isDetailedError } from './detailed-error';
 import { NotFoundError, Unauthorized, ValidationError } from './errors';
 
-type ErrorHandler = (message: string, details?: object) => MappedError;
+type ErrorHandler = (message: string, details?: Record<string, unknown>) => MappedError;
 
 export type MappedError = {
   status: number;
   errorCode: string;
-  details?: object;
+  details?: Record<string, unknown>;
 };
 
 type ErrorMap = {
@@ -18,7 +18,7 @@ export type ErrorMapper = (err: Error) => MappedError | null;
 
 const errorMap: ErrorMap = [
   {
-    errorHandler: (errorCode: string, details?: object) => ({
+    errorHandler: (errorCode: string, details?: Record<string, unknown>) => ({
       errorCode,
       status: 401,
       ...(details ? { details } : {}),
@@ -27,7 +27,7 @@ const errorMap: ErrorMap = [
   },
 
   {
-    errorHandler: (errorCode: string, details?: object) => ({
+    errorHandler: (errorCode: string, details?: Record<string, unknown>) => ({
       errorCode,
       status: 400,
       ...(details ? { details } : {}),
@@ -36,7 +36,7 @@ const errorMap: ErrorMap = [
   },
 
   {
-    errorHandler: (errorCode: string, details?: object) => ({
+    errorHandler: (errorCode: string, details?: Record<string, unknown>) => ({
       errorCode,
       status: 404,
       ...(details ? { details } : {}),
@@ -46,7 +46,7 @@ const errorMap: ErrorMap = [
 ];
 
 export const errorMapper = (err: Error | DetailedError): MappedError | null => {
-  const mappedError = errorMap.find(e => e.errors.includes(err.constructor));
+  const mappedError = errorMap.find((e) => e.errors.includes(err.constructor));
   if (!mappedError) {
     return null;
   }

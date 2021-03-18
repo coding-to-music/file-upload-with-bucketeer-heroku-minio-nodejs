@@ -1,4 +1,4 @@
-import { Logger } from '../logger/logger';
+import { Logger } from '../../framework/logger/logger';
 import { ErrorMapper } from './error-mapper';
 
 export type ErrorHandler = (err: Error) => ReturnType<ErrorMapper>;
@@ -9,7 +9,7 @@ export const errorHandlerFactory = ({
 }: {
   errorMapper: ErrorMapper;
   logger: Logger;
-}): ErrorHandler => err => {
+}): ErrorHandler => (err) => {
   const errorParameters = errorMapper(err);
 
   if (errorParameters) {
