@@ -4,7 +4,7 @@ const configObject = convict({
   port: {
     doc: 'The application port',
     format: Number,
-    default: 1337,
+    default: 3000,
     env: 'PORT',
   },
   domainSwagger: {
@@ -13,11 +13,39 @@ const configObject = convict({
     default: 'localhost:3000',
     env: 'APP_DOMAIN_SWAGGER',
   },
+  domain: {
+    doc: 'Domain name.',
+    format: String,
+    default: 'http://localhost:3000',
+    env: 'APP_DOMAIN',
+  },
+  database: {
+    url: {
+      doc: 'Database URL',
+      format: String,
+      default: 'postgresql://user:password@localhost:5432/db',
+      env: 'DATABASE_URL',
+    },
+    databaseUseSSL: {
+      doc: 'Use ssl when connecting',
+      format: Boolean,
+      default: false,
+      env: 'DATABASE_USE_SSL',
+    },
+  },
   host: {
     doc: 'The application host',
     format: String,
     default: '0.0.0.0',
     env: 'HOST',
+  },
+  logger: {
+    level: {
+      doc: 'Defines the level of the logger.',
+      format: String,
+      default: 'debug',
+      env: 'LOGGER_LEVEL',
+    },
   },
   documentationEnabled: {
     doc: 'Enable /documentation endpoints',
@@ -25,17 +53,45 @@ const configObject = convict({
     default: true,
     env: 'DOCUMENTATION_ENABLED',
   },
-  logLevel: {
-    doc: 'The log level of the application',
-    format: String,
-    default: 'debug',
-    env: 'LOG_LEVEL',
+  storage: {
+    bucketName: {
+      doc: 'Storage bucket name',
+      format: String,
+      default: 'seostic-bucket',
+      env: 'STORAGE_BUCKET_NAME',
+    },
+    accessKeyId: {
+      doc: 'Storage access key id',
+      format: String,
+      default: 'key',
+      env: 'AWS_ACCESS_KEY_ID',
+    },
+    secretAccessKey: {
+      doc: 'Storage secret access key id',
+      format: String,
+      default: 'secret1337',
+      env: 'AWS_SECRET_ACCESS_KEY',
+    },
+    region: {
+      doc: 'Storage region',
+      format: String,
+      default: 'us-east-1',
+      env: 'STORAGE_REGION',
+    },
+    url: {
+      doc: 'Storage url',
+      format: String,
+      default: 'http://localhost:9000',
+      env: 'STORAGE_URL',
+    },
   },
-  databaseURL: {
-    doc: 'The connection string of the database',
-    format: String,
-    default: 'postgresql://user:password@localhost:5432/db',
-    env: 'DATABASE_URL',
+  aws: {
+    urlExpirationSeconds: {
+      doc: 'URL expiration seconds',
+      format: Number,
+      default: 5 * 60,
+      env: 'URL_EXPIRATION_SECONDS',
+    },
   },
 });
 

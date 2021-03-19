@@ -16,9 +16,9 @@ export const imageGetURLEndpointFactory = ({
   method: EndpointMethods.GET,
   route: '/image-get-url',
   schema: {
-    summary: 'This endpoint is responsible for generating a signed put url for profile picture',
+    summary: 'This endpoint is responsible for generating a signed put url for an image',
     description: 'Returns a url which can be used to upload image to bucket',
-    tags: ['User'],
+    tags: ['Image'],
     response: {
       200: imageResponseOAComponent,
       403: baseOAErrorResponses[403],

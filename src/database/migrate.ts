@@ -1,33 +1,48 @@
 import Knex from 'knex';
+import { join } from 'path';
 import { config } from '../config';
+import { Logger } from '../framework/logger/logger';
+import { loggerPinoFactory } from '../framework/logger/logger-pino';
+import { handleUnhandledRejections, throwToGlobal } from '../framework/unhandled-rejection/rejection-handler';
 import { knexConfig } from './knex-config';
-import { handleUnhandledRejections } from '../framework/unhandled-rejection/rejection-handler';
 
-export const migrate = async (opts: {
-  dbConnectionString: string;
+export const migrate = async ({
+  drop,
+  logger,
+  schemaName,
+  migrationDirectoryPath,
+  connectionString,
+}: {
   drop: boolean;
-  log: (...msg: unknown[]) => void;
-  schema?: string;
+  logger: Logger;
+  schemaName?: string;
+  migrationDirectoryPath: string;
+  connectionString: string;
 }): Promise<void> => {
-  const knex = Knex(knexConfig({ connectionString: opts.dbConnectionString, schemaName: opts.schema, log: opts.log }));
+  const knex = Knex(knexConfig({ schemaName, logger, migrationDirectoryPath, connectionString }));
 
   try {
-    if (opts.drop) {
+    if (drop) {
       await knex.migrate.rollback({}, true);
     } else {
       await knex.migrate.latest();
     }
-    opts.log('Migration successful');
+    logger.info('Migration successful');
   } finally {
     await knex.destroy();
   }
 };
 
 if (!module.parent) {
+  const logger = loggerPinoFactory({ level: 'debug', name: 'migration', version: '1.0' });
+
   handleUnhandledRejections();
+
   migrate({
-    dbConnectionString: config.databaseURL,
     drop: process.argv.includes('--drop'),
-    log: console.log,
-  });
+    logger,
+    migrationDirectoryPath: join(__dirname, './migrations'),
+    connectionString: config.database.url,
+    ...(config.database.databaseUseSSL ? { ssl: true } : {}),
+  }).catch(throwToGlobal);
 }

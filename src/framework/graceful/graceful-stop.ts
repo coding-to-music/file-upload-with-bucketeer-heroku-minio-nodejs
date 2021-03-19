@@ -2,13 +2,13 @@ import { race } from 'bluebird';
 
 export class TimeoutError extends Error {}
 
-export const delay = (ttl: number): Promise<void> => new Promise<void>(res => setTimeout(() => res(), ttl));
-export const timeout = (ttl: number): Promise<never> =>
+export const delay = async (ttl: number): Promise<void> => new Promise<void>((res) => setTimeout(() => res(), ttl));
+export const timeout = async (ttl: number): Promise<never> =>
   new Promise((_, rej) => setTimeout(() => rej(new TimeoutError()), ttl));
 export const runWithTimeout = <T>(ttl: number, promise: Promise<T>): PromiseLike<T> => race([promise, timeout(ttl)]);
 
 export interface Server {
-  close: () => Promise<void>;
+  close: () => void;
 }
 
 export interface GracefulWrapper {
@@ -42,7 +42,7 @@ export const gracefulWrapperHTTPFactory = (server: Server, timeout = 10000): Gra
   return {
     timeout,
     shutdown: async () => {
-      await server.close();
+      server.close();
     },
   };
 };
@@ -64,7 +64,7 @@ export const stopGracefully = ({
   onShutdownGracefulSuccess?: () => void;
   onShutdownGracefulFail?: () => void;
 }): void => {
-  processSignals.forEach(signal =>
+  processSignals.forEach((signal) =>
     process.on(
       signal,
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -102,13 +102,13 @@ export const terminationHandlerFactory = ({
   onShutdownStart?: () => void;
   onShutdownGracefulSuccess?: () => void;
   onShutdownGracefulFail?: () => void;
-}) => async () => {
+}) => async (): Promise<void> => {
   try {
     onShutdownStart();
     await runWithTimeout(
       timeout,
       (async () => {
-        await Promise.all(gracefulWrappers.map(g => runWithTimeout(g.timeout, g.shutdown())));
+        await Promise.all(gracefulWrappers.map((g) => runWithTimeout(g.timeout, g.shutdown())));
         if (cleanup) {
           await cleanup();
         }

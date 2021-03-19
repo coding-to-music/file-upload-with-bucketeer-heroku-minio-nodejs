@@ -6,7 +6,7 @@ export type ImageGetURLOutput = { uploadURL: string };
 
 export type ImageGetURLUseCase = AsyncUseCase<ImageGetURLInput, ImageGetURLOutput>;
 
-export const profilePictureGetURLUseCaseFactory = ({
+export const imageGetURLUseCaseFactory = ({
   storageService,
   bucketName,
 }: {

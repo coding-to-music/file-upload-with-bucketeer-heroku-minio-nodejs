@@ -1,11 +1,11 @@
 {
-  "name": "skeleton-backend",
+  "name": "file-upload-sample",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "git@gitlab.com:codingsans/almateam/skeleton-backend.git",
+  "repository": "git@gitlab.com:brezodani/file-upload-poc.git",
   "license": "MIT",
   "private": true,
-  "description": "skeleton API",
+  "description": "file upload sample",
   "scripts": {
     "lint": "eslint src --ext .ts",
     "build": "tsc && yarn copy-sql-files",

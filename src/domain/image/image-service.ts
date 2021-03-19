@@ -1,34 +1,27 @@
-import { NotFoundError } from '../../framework/error/errors';
-import { Image } from './image';
+import { v4 } from 'uuid';
+import { ListResult } from '../list/list';
+import { AddImageOptions, Image } from './image';
 import { ImageRepo } from './image-repo';
 
 export interface ImageService {
-  ensureAndGetByID(id: Image['id']): Promise<Image>;
-  create(cluster: Image): Promise<void>;
-
-  getAll(): Promise<Image[]>;
+  create(cluster: AddImageOptions): Promise<void>;
+  getAll(params: { skip: number; limit: number }): Promise<ListResult<Image>>;
 }
 
 export const imageServiceFactory = ({ imageRepo }: { imageRepo: ImageRepo }): ImageService => {
-  const ensureAndGetByID = async (id: string): Promise<Image> => {
-    const image = await imageRepo.getByID(id);
-    if (!image) {
-      throw new NotFoundError('image');
-    }
-    return image;
+  const getAll: ImageService['getAll'] = async (params): Promise<ListResult<Image>> => {
+    const [count, items] = await Promise.all([imageRepo.countAll(), imageRepo.getAll(params)]);
+
+    return { count, items };
   };
 
-  const getAll = async (): Promise<Image[]> => {
-    return imageRepo.getAll();
-  };
-
-  const create = async (image: Image): Promise<void> => {
-    return imageRepo.addResource(image);
+  const create: ImageService['create'] = async (image): Promise<void> => {
+    const id = v4();
+    return imageRepo.addResource({ ...image, id });
   };
 
   return {
     create,
-    ensureAndGetByID,
     getAll,
   };
 };

@@ -1,72 +1,50 @@
 import ramda from 'ramda';
-import { KeyMapping, renameKeysFromDB, renameKeysToDB } from '../../framework/sql/rename-keys';
+import { RunQuery } from '../../database/create-run-query';
+import { renameKeysFromDB, renameKeysToDB, RootMapping } from '../../framework/sql/rename-keys';
 import sql, { SqlTemplateArg, SqlTemplateResult } from '../../framework/sql/sql-template';
 import { Resource } from './resource';
 import {
   AddableResourceRepo,
   ReadableResourceRepo,
+  RemovableResourceRepo,
   UpdatableResourceRepo,
-  MultipleReadableResourceRepo,
 } from './resource-repo';
-import { RunQuery } from '../../database/create-run-query';
-import { PageOptions, ListResult } from '../list/list';
 
 export const addResourceFactory = <T extends Resource>(
   resourceType: string,
-  keyMap: KeyMapping<T>,
+  keyMap: RootMapping,
   runQuery: RunQuery,
-): AddableResourceRepo<T>['addResource'] => async (resource: T | T[]): Promise<void> => {
+): AddableResourceRepo<T>['addResource'] => async (resource: T | T[]) => {
   if (Array.isArray(resource) && resource.length === 0) {
     return;
   }
   await runQuery(addResourceQueryFactory(resourceType, keyMap, resource));
 };
 
-export const addResourceQueryFactory = <T extends Resource>(
+export const getResourceByIDFactory = <T extends Resource>(
   resourceType: string,
-  keyMap: KeyMapping<T>,
-  resources: T | T[],
-): SqlTemplateResult => {
-  const resourcesSQL = Array.isArray(resources)
-    ? resources.map(r => renameKeysToDB(keyMap, r))
-    : [renameKeysToDB(keyMap, resources)];
-  return sql`INSERT INTO ${sql(resourceType)} (${sql(getSQLKeysFromObject(resourcesSQL[0]))}) VALUES ${sql.insertArray(
-    resourcesSQL.map(r => Object.values(r)),
-  )};`;
-};
-
-const getSQLKeysFromObject = (resource: object): string => Object.keys(resource).join(', ');
-
-export const getMultipleResourcesPaged = <T extends Resource>(
-  resourceType: string,
-  keyMap: KeyMapping<T>,
+  keyMap: RootMapping,
   runQuery: RunQuery,
-): MultipleReadableResourceRepo<T, PageOptions>['getMultiplePaged'] => async (
-  pageOptions: PageOptions,
-): Promise<ListResult<T>> => {
-  const [itemRes, countRes] = await Promise.all([
-    runQuery(
-      getResourceQueryFactory({
-        resourceType,
-        limit: pageOptions.limit,
-        skip: pageOptions.skip,
-      }),
-    ),
-    runQuery(countMultipleResourcesFactory(resourceType)),
-  ]);
+): ReadableResourceRepo<T>['getByID'] => async (id) => {
+  const res = await runQuery(getResourceQueryFactory({ resourceType, where: sql`x.id = ${id}`, limit: 1 }));
 
-  return {
-    items: itemRes.rows.map(row => renameKeysFromDB<T>(keyMap, row)),
-    count: parseInt(countRes.rows[0].count, 10),
-  };
+  if (res.rowCount === 0) {
+    return null;
+  }
+  return renameKeysFromDB<T>(keyMap, res.rows[0]);
 };
 
-export const countMultipleResourcesFactory = (resourceType: string): SqlTemplateResult => sql`
-  SELECT
+export const getResourceCountQueryFactory = (opts: {
+  resourceType: string;
+  where?: SqlTemplateResult;
+}): SqlTemplateResult => sql`
+  SELECTI
     COUNT(DISTINCT x.id)
   FROM
-    ${sql(resourceType)} x
-  `;
+    ${sql(opts.resourceType)} x
+  ${opts.where ? sql`WHERE (${opts.where})` : sql('')}
+  ;
+`;
 
 export const getResourceQueryFactory = (opts: {
   resourceType: string;
@@ -83,49 +61,31 @@ export const getResourceQueryFactory = (opts: {
   ${opts.orderBy ? sql`ORDER BY ${opts.orderBy}` : sql('')}
   ${isDefined(opts.limit) ? sql`LIMIT ${opts.limit}` : sql('')}
   ${isDefined(opts.skip) ? sql`OFFSET ${opts.skip}` : sql('')}
-  ;
-`;
+  ;`;
 
-export const getResourceByIDFactory = <T extends Resource>(
+export const addResourceQueryFactory = <T extends Resource>(
   resourceType: string,
-  keyMap: KeyMapping<T>,
-  runQuery: RunQuery,
-): ReadableResourceRepo<T>['getByID'] => async (id: string): Promise<T | undefined> => {
-  const res = await runQuery(getResourceQueryFactory({ resourceType, where: sql`x.id = ${id}`, limit: 1 }));
-
-  if (res.rowCount === 0) {
-    return undefined;
-  }
-  return renameKeysFromDB<T>(keyMap, res.rows[0]);
+  keyMap: RootMapping,
+  resources: T | T[],
+): SqlTemplateResult => {
+  const resourcesSQL = Array.isArray(resources)
+    ? resources.map((r) => renameKeysToDB(keyMap, r))
+    : [renameKeysToDB(keyMap, resources)];
+  return sql`INSERT INTO ${sql(resourceType)} (${sql(getSQLKeysFromObject(resourcesSQL[0]))}) VALUES ${sql.insertArray(
+    resourcesSQL.map((r) => Object.values(r)),
+  )};`;
 };
 
-export const getMultipleByIDsFactory = <T extends Resource>(
-  resourceType: string,
-  keyMap: KeyMapping<T>,
-  runQuery: RunQuery,
-) => async (ids: T['id'][]) => {
-  if (ids.length < 1) {
-    return [];
-  }
-  const res = await runQuery(sql`
-    SELECT * FROM ${sql(resourceType)}
-    WHERE id IN ${sql.groupArray(ids)};
-  `);
+const getSQLKeysFromObject = (resource: Record<string, unknown>): string => Object.keys(resource).join(', ');
 
-  return res.rows.map(row => renameKeysFromDB<T>(keyMap, row));
-};
-
-export const updateResourceByIDFactory = <T extends Resource, Updates extends { [key: string]: SqlTemplateArg }>(
+export const updateResourceByIDFactory = <TUpdates extends Partial<{ [key: string]: SqlTemplateArg }>>(
   resourceType: string,
-  keyMap: KeyMapping<T>,
+  keyMap: RootMapping,
   runQuery: RunQuery,
-): UpdatableResourceRepo<Updates>['updateResourceByID'] => async (
-  resourceID: Resource['id'],
-  updates: Updates,
-): Promise<void> => {
+): UpdatableResourceRepo<TUpdates>['updateResourceByID'] => async (id, updates): Promise<void> => {
   const sqlUpdateObject = renameKeysToDB(keyMap, omitUndefined(updates));
   if (Object.keys(sqlUpdateObject).length) {
-    await runQuery(updateResourceByIDQueryFactory(sqlUpdateObject, resourceID, resourceType));
+    await runQuery(updateResourceByIDQueryFactory(sqlUpdateObject, id, resourceType));
   }
 };
 
@@ -139,11 +99,15 @@ const updateResourceByIDQueryFactory = <T extends { [key: string]: SqlTemplateAr
   WHERE id = ${resourceID};
 `;
 
-const omitUndefined = ramda.filter(i => i !== undefined);
-const isDefined = <T>(val: T | undefined | null): val is T => !ramda.isNil(val);
+const isNotUndefined = <T>(val: T | undefined): val is T => val !== undefined;
+const omitUndefined = ramda.filter(isNotUndefined);
+export const isDefined = <T>(val: T | undefined | null): val is T => !ramda.isNil(val);
 
-export const removeResourceByIDFactory = (resourceType: string, runQuery: RunQuery) => async (resourceID: string) => {
-  await runQuery(removeResourceByIDQueryFactory(resourceType, resourceID));
+export const removeResourceByIDFactory = <T extends Resource>(
+  resourceType: string,
+  runQuery: RunQuery,
+): RemovableResourceRepo<T>['removeByID'] => async (id) => {
+  await runQuery(removeResourceByIDQueryFactory(resourceType, id));
 };
 
 export const removeResourceByIDQueryFactory = (resourceType: string, resourceID: string): SqlTemplateResult => {

@@ -1,27 +1,21 @@
-import { name, version } from '../package.json';
-import { getApp } from './app';
+import { start } from './app';
 import { config } from './config';
-import { loggerFactoryPino } from './domain/logger/logger-pino';
-import { gracefulWrapperHTTPFactory, stopGracefully } from './framework/graceful/graceful-stop';
-import { handleUnhandledRejections } from './framework/unhandled-rejection/rejection-handler';
+import { loggerPinoFactory } from './framework/logger/logger-pino';
 
-if (!module.parent) {
-  handleUnhandledRejections();
-  const main = async (): Promise<void> => {
-    const logger = loggerFactoryPino({ level: config.logLevel, name, version });
-    const app = await getApp({ logger });
+const thrower = (err: unknown): void => {
+  throw err;
+};
 
-    const gracefulHTTP = gracefulWrapperHTTPFactory(app, 1000);
-    stopGracefully({
-      gracefulWrappers: [gracefulHTTP],
-      processSignals: ['SIGINT', 'SIGTERM'],
-      timeout: 3000,
-      onShutdownStart: () => logger.info('shutting down gracefully'),
-      onShutdownGracefulFail: () => logger.fatal('could not shut down gracefully'),
-      onShutdownGracefulSuccess: () => logger.info('shut down gracefully'),
-    });
+const throwToGlobal = (err: unknown): NodeJS.Immediate => setImmediate(() => thrower(err));
 
-    app.listen(config.port, config.host);
-  };
-  main();
-}
+const startApp = async (): Promise<void> => {
+  const logger = loggerPinoFactory({
+    name: 'fastify-backend',
+    version: '1.0.0',
+    level: config.logger.level,
+  });
+
+  await start({ logger, config });
+};
+
+startApp().catch(throwToGlobal);
