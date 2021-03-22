@@ -11,14 +11,14 @@ import { ImageRepo } from './image-repo';
 
 const baseMapping = {
   id: { mapTo: 'id', type: ProjectionType.MAP },
-  name: { mapTo: 'name', type: ProjectionType.MAP },
+  title: { mapTo: 'title', type: ProjectionType.MAP },
   imageURL: { mapTo: 'image_url', type: ProjectionType.MAP },
   createdAt: { mapTo: 'created_at', type: ProjectionType.MAP },
 };
 
 const IMAGE_KEY_MAPPING = rootMapping<Image>(baseMapping);
 
-const IMAGE_RESOURCE_TYPE = 'image';
+const IMAGE_RESOURCE_TYPE = 'images';
 
 export const imageRepoSQLFactory = ({ queryService }: { queryService: QueryService }): ImageRepo => ({
   addResource: addResourceFactory(IMAGE_RESOURCE_TYPE, IMAGE_KEY_MAPPING, queryService.run),
@@ -27,7 +27,7 @@ export const imageRepoSQLFactory = ({ queryService }: { queryService: QueryServi
       limit,
       skip,
       resourceType: IMAGE_RESOURCE_TYPE,
-      orderBy: sql`x.created_at`,
+      orderBy: sql`x.created_at desc`,
     });
     const res = await queryService.run<RecordKeyType>(query);
 

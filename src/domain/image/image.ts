@@ -1,7 +1,7 @@
 import { Resource } from '../resource/resource';
 
 export type Image = Resource & {
-  name: string;
+  title: string;
   imageURL: string;
   createdAt: Date;
 };
@@ -9,7 +9,7 @@ export type Image = Resource & {
 export type ImageListItemDTO = Image;
 
 export type AddImageInputDTO = {
-  name: string;
+  title: string;
   imageURL: string;
 };
 

@@ -75,13 +75,13 @@ const configObject = convict({
     region: {
       doc: 'Storage region',
       format: String,
-      default: 'us-east-1',
+      default: 'eu-west-1',
       env: 'STORAGE_REGION',
     },
     url: {
       doc: 'Storage url',
       format: String,
-      default: 'http://localhost:9000',
+      default: 'http://127.0.0.1:9000',
       env: 'STORAGE_URL',
     },
   },

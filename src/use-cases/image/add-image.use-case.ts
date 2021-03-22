@@ -13,7 +13,7 @@ export const addImageUseCaseFactory = ({ imageService }: { imageService: ImageSe
 ) => {
   await imageService.create({
     createdAt: new Date(),
-    name: input.name,
-    imageURL: input.imageURL,
+    title: input.title,
+    imageURL: input.imageURL.split('?')[0],
   });
 };

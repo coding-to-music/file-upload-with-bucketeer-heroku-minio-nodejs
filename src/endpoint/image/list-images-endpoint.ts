@@ -3,7 +3,7 @@ import { baseOAErrorResponses } from '../../domain/+oa_components/responses.oa-c
 import { Endpoint } from '../../domain/endpoint/endpoint';
 import { EndpointMethods } from '../../domain/endpoint/endpoint-methods';
 import { ImageListItemDTO } from '../../domain/image/image';
-import { imageResponseOAComponent } from '../../domain/image/image.oa-component';
+import { imagesItemResponseOAComponent } from '../../domain/image/image.oa-component';
 import { ListImagesUseCase } from '../../use-cases/image/list-images.use-case';
 import { EmptyObject } from './../../framework/object-types/empty-object';
 
@@ -33,7 +33,7 @@ export const listImagesEndpointFactory = ({
         additionalProperties: false,
         properties: {
           totalCount: { type: 'number' },
-          items: { type: 'array', items: imageResponseOAComponent },
+          items: { type: 'array', items: imagesItemResponseOAComponent },
         },
       },
       403: baseOAErrorResponses[403],

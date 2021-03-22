@@ -38,7 +38,7 @@ export const getResourceCountQueryFactory = (opts: {
   resourceType: string;
   where?: SqlTemplateResult;
 }): SqlTemplateResult => sql`
-  SELECTI
+  SELECT
     COUNT(DISTINCT x.id)
   FROM
     ${sql(opts.resourceType)} x
