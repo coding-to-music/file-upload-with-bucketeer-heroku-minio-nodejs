@@ -57,7 +57,7 @@ const configObject = convict({
     bucketName: {
       doc: 'Storage bucket name',
       format: String,
-      default: 'seostic-bucket',
+      default: 'sample-bucket',
       env: 'STORAGE_BUCKET_NAME',
     },
     accessKeyId: {

@@ -8,8 +8,7 @@ export const s3ServiceS3Factory = ({
   s3: S3;
   urlExpirationSeconds: number;
 }): StorageService => ({
-  getSignedURLForUpload: async (bucket, key, method, contentType) => {
-    method;
+  getSignedURLForUpload: async (bucket, key, contentType) => {
     return await s3.getSignedUrlPromise('putObject', {
       Bucket: bucket,
       Key: key,
@@ -19,17 +18,6 @@ export const s3ServiceS3Factory = ({
     });
   },
 
-  isExistingBlob: async (bucket, key) => {
-    try {
-      await s3.headObject({ Bucket: bucket, Key: key }).promise();
-      return true;
-    } catch (e) {
-      if ((e as AWSError).code === 'NotFound') {
-        return false;
-      }
-      throw e;
-    }
-  },
   createPublicBucketIfNotExists: async (bucket) => {
     const policyID = `${bucket}-public-get-policy`;
     const policy = `{

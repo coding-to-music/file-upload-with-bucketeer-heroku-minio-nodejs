@@ -1,12 +1,12 @@
 import { v4 } from 'uuid';
-import { Image } from './image';
+import { ImageWithTitle } from './image';
 
 export const imageFactory = ({
   id = v4(),
   title = v4(),
   createdAt = new Date(),
   imageURL = v4(),
-}: Partial<Image> = {}): Image => ({
+}: Partial<ImageWithTitle> = {}): ImageWithTitle => ({
   id,
   title,
   createdAt,

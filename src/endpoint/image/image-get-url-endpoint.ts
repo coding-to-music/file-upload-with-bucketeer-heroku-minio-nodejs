@@ -6,7 +6,7 @@ import { EmptyObject } from '../../framework/object-types/empty-object';
 import { ImageGetURLUseCase } from '../../use-cases/image/image-get-url.use-case';
 
 export type ImageGetURLOutput = { uploadURL: string };
-export type ImageGetURLRequestQuery = { fileType: string; extension: string };
+export type ImageGetURLRequestQuery = { fileType: string };
 
 export const imageGetURLEndpointFactory = ({
   imageGetURLUseCase,
@@ -27,8 +27,7 @@ export const imageGetURLEndpointFactory = ({
   },
   handler: async (request) => {
     const fileType = request.query.fileType;
-    const extension = request.query.extension;
-    const response = await imageGetURLUseCase({ fileType, extension });
+    const response = await imageGetURLUseCase({ fileType });
 
     return { status: 200, response };
   },

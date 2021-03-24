@@ -1,10 +1,4 @@
-export enum SignedURLMethod {
-  PUT = 'PUT',
-  GET = 'GET',
-}
-
 export interface StorageService {
-  getSignedURLForUpload(bucket: string, key: string, method: SignedURLMethod, contentType?: string): Promise<string>;
-  isExistingBlob(bucket: string, key: string): Promise<boolean>;
+  getSignedURLForUpload(bucket: string, key: string, contentType?: string): Promise<string>;
   createPublicBucketIfNotExists(bucket: string): Promise<void>;
 }

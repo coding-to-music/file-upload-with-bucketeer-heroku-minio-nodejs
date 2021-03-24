@@ -6,7 +6,7 @@ import {
   getResourceCountQueryFactory,
   getResourceQueryFactory,
 } from '../resource/resource-repo-sql-factory';
-import { Image } from './image';
+import { ImageWithTitle } from './image';
 import { ImageRepo } from './image-repo';
 
 const baseMapping = {
@@ -16,7 +16,7 @@ const baseMapping = {
   createdAt: { mapTo: 'created_at', type: ProjectionType.MAP },
 };
 
-const IMAGE_KEY_MAPPING = rootMapping<Image>(baseMapping);
+const IMAGE_KEY_MAPPING = rootMapping<ImageWithTitle>(baseMapping);
 
 const IMAGE_RESOURCE_TYPE = 'images';
 
@@ -31,7 +31,7 @@ export const imageRepoSQLFactory = ({ queryService }: { queryService: QueryServi
     });
     const res = await queryService.run<RecordKeyType>(query);
 
-    return res.rows.map((row) => renameKeysFromDB<Image>(IMAGE_KEY_MAPPING, row));
+    return res.rows.map((row) => renameKeysFromDB<ImageWithTitle>(IMAGE_KEY_MAPPING, row));
   },
   countAll: async () => {
     const query = getResourceCountQueryFactory({

@@ -1,7 +1,7 @@
-import { SignedURLMethod, StorageService } from '../../framework/storage/storage-service';
+import { StorageService } from '../../framework/storage/storage-service';
 import { AsyncUseCase } from '../../framework/use-case/use-case';
 
-export type ImageGetURLInput = { fileType: string; extension: string };
+export type ImageGetURLInput = { fileType: string };
 export type ImageGetURLOutput = { uploadURL: string };
 
 export type ImageGetURLUseCase = AsyncUseCase<ImageGetURLInput, ImageGetURLOutput>;
@@ -16,7 +16,6 @@ export const imageGetURLUseCaseFactory = ({
   const uploadURL = await storageService.getSignedURLForUpload(
     bucketName,
     `${Math.floor(Math.random() * 1000)}`,
-    SignedURLMethod.PUT,
     input.fileType,
   );
   return { uploadURL };
