@@ -1,7 +1,7 @@
 import { Consumer, GracefulWrapper, Server } from './graceful-stop';
 
 export const serverFactory = (): Server => ({
-  close: () => Promise.resolve(),
+  close: async () => Promise.resolve(),
 });
 export const gracefulWrapperFactory = ({
   timeout = 1000,
@@ -12,7 +12,7 @@ export const gracefulWrapperFactory = ({
 });
 
 export const consumerFactory = ({
-  isProcessing = () => Promise.resolve(true),
+  isProcessing = async () => Promise.resolve(true),
   stopReception = async () => Promise.resolve(),
   closeReception = async () => Promise.resolve(),
 }: Partial<Consumer>): Consumer => ({

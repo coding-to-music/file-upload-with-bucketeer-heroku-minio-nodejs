@@ -1,4 +1,11 @@
-export type SqlTemplateArg = null | number | string | boolean | Date | object | undefined;
+export type SqlTemplateArg =
+  | string
+  | number
+  | boolean
+  | Date
+  | null
+  | { [Key in string]?: SqlTemplateArg }
+  | SqlTemplateArg[];
 type SqlTemplateArgIn = SqlTemplateResult | SqlTemplateArg;
 type SqlTemplateArgs = (SqlTemplateArgIn | SqlTemplateArgIn[])[];
 export type SqlTemplateResult = {
@@ -16,7 +23,7 @@ class SqlTemplateResultObject implements SqlTemplateResult {
   constructor(
     public text: string,
     public values: SqlTemplateArg[],
-    public __raw: {
+    public raw: {
       parts: string[];
       args: SqlTemplateArgs;
       counter: number;
@@ -32,24 +39,27 @@ const sqlFn: SqlTemplateFunction = (
   return parse(parts, args);
 };
 
-const sqlInsertArray: (vals: SqlTemplateArg[][]) => SqlTemplateResult = vals =>
-  sqlFn(['', ...Array(Math.max(0, vals.length - 1)).fill(', '), ''], ...vals.map(a => sqlFn`${sqlGroupArray(a)}`));
-
-const sqlGroupArray: (vals: SqlTemplateArg[]) => SqlTemplateResult = vals =>
-  sqlFn(['(', ...Array(Math.max(0, vals.length - 1)).fill(', '), ')'], ...vals.map(a => sqlFn`${a}`));
-const sqlArrayItems: (vals: SqlTemplateArg[]) => SqlTemplateResult = vals =>
-  sqlFn(['ARRAY[', ...Array(Math.max(0, vals.length - 1)).fill(', '), ']'], ...vals.map(a => sqlFn`${a}`));
-
-const sqlSetMap: (vals: { [key: string]: SqlTemplateArg }) => SqlTemplateResult = vals =>
+const sqlInsertArray: (vals: SqlTemplateArg[][]) => SqlTemplateResult = (vals) =>
   sqlFn(
-    ['', ...Array(Object.keys(vals).length - 1).fill(', '), ''],
-    ...Object.keys(vals).map(key => sqlFn`${sqlFn(key)} = ${vals[key]}`),
+    ['', ...Array<string>(Math.max(0, vals.length - 1)).fill(', '), ''],
+    ...vals.map((a) => sqlFn`${sqlGroupArray(a)}`),
   );
 
-const sqlAndEqual: (vals: { [key: string]: SqlTemplateArg }) => SqlTemplateResult = vals =>
+const sqlGroupArray: (vals: SqlTemplateArg[]) => SqlTemplateResult = (vals) =>
+  sqlFn(['(', ...Array<string>(Math.max(0, vals.length - 1)).fill(', '), ')'], ...vals.map((a) => sqlFn`${a}`));
+const sqlArrayItems: (vals: SqlTemplateArg[]) => SqlTemplateResult = (vals) =>
+  sqlFn(['ARRAY[', ...Array<string>(Math.max(0, vals.length - 1)).fill(', '), ']'], ...vals.map((a) => sqlFn`${a}`));
+
+const sqlSetMap: (vals: { [key: string]: SqlTemplateArg }) => SqlTemplateResult = (vals) =>
   sqlFn(
-    ['', ...Array(Object.keys(vals).length - 1).fill(' AND '), ''],
-    ...Object.keys(vals).map(key => sqlFn`${sqlFn(key)} = ${vals[key]}`),
+    ['', ...Array<string>(Object.keys(vals).length - 1).fill(', '), ''],
+    ...Object.keys(vals).map((key) => sqlFn`${sqlFn(key)} = ${vals[key]}`),
+  );
+
+const sqlAndEqual: (vals: { [key: string]: SqlTemplateArg }) => SqlTemplateResult = (vals) =>
+  sqlFn(
+    ['', ...Array<string>(Object.keys(vals).length - 1).fill(' AND '), ''],
+    ...Object.keys(vals).map((key) => sqlFn`${sqlFn(key)} = ${vals[key]}`),
   );
 
 interface SQLTemplate extends SqlTemplateFunction {
@@ -94,11 +104,11 @@ function parse(parts: string[], args: SqlTemplateArgs, counter = 1): SqlTemplate
 
       // nested value
       if (arg instanceof SqlTemplateResultObject) {
-        const result = parse(arg.__raw.parts, arg.__raw.args, acc.counter) as SqlTemplateResultObject;
+        const result = parse(arg.raw.parts, arg.raw.args, acc.counter) as SqlTemplateResultObject;
         return {
           text: acc.text + val + result.text,
           values: [...acc.values, ...result.values],
-          counter: result.__raw.counter,
+          counter: result.raw.counter,
         };
       }
 

@@ -1,14 +1,14 @@
-/* eslint-disable @typescript-eslint/camelcase */
-import sql, { SqlTemplateResult, isObject } from './sql-template';
+/* eslint-disable @typescript-eslint/naming-convention */
+import sql, { isObject, SqlTemplateResult } from './sql-template';
+
+interface TestDataInput {
+  testName: string;
+  input: unknown;
+  expected: boolean;
+}
 
 describe('sql-template', () => {
   describe('isObject', () => {
-    interface TestDataInput {
-      testName: string;
-      input: unknown;
-      expected: boolean;
-    }
-
     const testCases: TestDataInput[] = [
       {
         testName: 'should return true for array',
@@ -39,12 +39,12 @@ describe('sql-template', () => {
       {
         testName: 'should return false for a function',
         // eslint-disable-next-line @typescript-eslint/no-empty-function
-        input: function(): void {},
+        input: function (): void {},
         expected: false,
       },
     ];
 
-    testCases.forEach(t => {
+    testCases.forEach((t) => {
       it(t.testName, () => {
         expect(isObject(t.input)).toBe(t.expected);
       });
@@ -206,15 +206,9 @@ describe('sql-template', () => {
         expectedText: 'INSERT INTO resource (id, json) VALUES ($1, $2);',
         expectedValues: [1, [2, 3]],
       },
-      {
-        testName: 'should return return array in template via insertArray',
-        query: sql`INSERT INTO resource (id, json) VALUES ${sql.insertArray([[1, [2, 3]]])};`,
-        expectedText: 'INSERT INTO resource (id, json) VALUES ($1, $2);',
-        expectedValues: [1, [2, 3]],
-      },
     ];
 
-    testCases.forEach(t => {
+    testCases.forEach((t) => {
       it(t.testName, () => {
         expect(t.query.text).toEqual(t.expectedText);
         expect(t.query.values).toEqual(t.expectedValues);

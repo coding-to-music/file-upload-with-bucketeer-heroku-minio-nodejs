@@ -9,7 +9,7 @@ describe('run-in-context', () => {
       }
       {
         const context = getContext();
-        const result = context.get('foo');
+        const result = context.get('foo') as string;
         expect(result).toBe('bar');
       }
     });

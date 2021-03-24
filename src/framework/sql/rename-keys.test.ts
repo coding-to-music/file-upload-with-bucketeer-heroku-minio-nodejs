@@ -1,175 +1,247 @@
-/* eslint-disable @typescript-eslint/camelcase */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { KeyMapping, renameKeysToDB, renameKeysFromDB, MappingOption } from './rename-keys';
-import { SqlTemplateArg } from './sql-template';
+import {
+  embeddedMapping,
+  ProjectionType,
+  renameKeysFromDB,
+  renameKeysToDB,
+  rootMapping,
+  RecordKeyType,
+  RootMapping,
+} from './rename-keys';
+
+interface TestDataItem<T extends RecordKeyType> {
+  name: string;
+  keyMap: RootMapping;
+  original: T;
+  expected: RecordKeyType;
+}
+
+type TestObj = {
+  a: string;
+  b?: number;
+  c?: {
+    d: number;
+    e?: {
+      f?: number;
+    };
+  };
+};
 
 describe('renameKeysToDB', () => {
-  interface TestDataItem<T extends { [key: string]: SqlTemplateArg }> {
-    name: string;
-    keyMap: KeyMapping<T>;
-    original: T;
-    expected: { [key: string]: SqlTemplateArg };
-  }
-
-  type TestObj = {
-    a: string;
-    b?: number;
-  };
-
   const testData: TestDataItem<TestObj>[] = [
     {
       name: 'should rename keys of object based on keyMap',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { mapTo: 'b_k', type: MappingOption.Map },
-      },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.MAP },
+      }),
       original: { a: 'b', b: 1 },
       expected: { a_k: 'b', b_k: 1 },
     },
     {
       name: 'should ignore keys of object based on keyMap',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { mapTo: '', type: MappingOption.Ignore },
-      },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: '', type: ProjectionType.IGNORE },
+      }),
       original: { a: 'b', b: 1 },
       expected: { a_k: 'b' },
     },
     {
       name: 'should ignore keys of object based on keyMap (fromDB)',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { mapTo: 'b_k', type: MappingOption.OnlyFromDB },
-      },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.ONLY_FROM_DB },
+      }),
       original: { a: 'b', b: 1 },
       expected: { a_k: 'b' },
     },
     {
       name: 'should map keys of object based on keyMap (toDB)',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { mapTo: 'b_k', type: MappingOption.OnlyToDB },
-      },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.ONLY_TO_DB },
+      }),
       original: { a: 'b', b: 1 },
       expected: { a_k: 'b', b_k: 1 },
     },
     {
       name: 'should ignore keys of object on invalid keyMap',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
         b: { mapTo: 'b_k', type: 'asd' as any },
-      },
+      }),
       original: { a: 'b', b: 1 },
       expected: { a_k: 'b' },
     },
     {
-      name: 'should map keys to the same key of object on invalid mapTo',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { type: MappingOption.Map },
-      } as any,
+      name: 'should map keys to the same key of object on invalid mapTo, leaving out corrupted mappings',
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { type: ProjectionType.MAP },
+      } as any),
       original: { a: 'b', b: 1 },
-      expected: { a_k: 'b', b: 1 },
+      expected: { a_k: 'b' },
     },
     {
       name: 'should ignore keys missing from obj',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { mapTo: 'b_k', type: MappingOption.Map },
-      },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.MAP },
+      }),
       original: { a: 'b' },
       expected: { a_k: 'b' },
     },
+    {
+      name: 'should enable embedded mappings',
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.MAP },
+        c: embeddedMapping({
+          d: { mapTo: 'c_d_k', type: ProjectionType.MAP },
+        }),
+      }),
+      original: { a: 'b', c: { d: 3 } },
+      expected: { a_k: 'b', c_d_k: 3 },
+    },
+    {
+      name: 'should enable deep embedded mappings',
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.MAP },
+        c: embeddedMapping({
+          d: { mapTo: 'c_d_k', type: ProjectionType.MAP },
+          e: embeddedMapping({
+            f: { mapTo: 'c_e_f_k', type: ProjectionType.MAP },
+          }),
+        }),
+      }),
+      original: { a: 'b', c: { d: 3, e: { f: 4 } } },
+      expected: { a_k: 'b', c_d_k: 3, c_e_f_k: 4 },
+    },
   ];
-  testData.forEach(d =>
+  testData.forEach((d) =>
     it(d.name, () => {
-      expect(Object.keys(renameKeysToDB(d.keyMap, d.original))).toEqual(Object.keys(d.expected));
       expect(renameKeysToDB(d.keyMap, d.original)).toEqual(d.expected);
     }),
   );
 });
 
 describe('renameKeysFromDB', () => {
-  interface TestDataItem<T extends { [key: string]: SqlTemplateArg }> {
+  interface TestDataItem<T extends RecordKeyType> {
     name: string;
-    keyMap: KeyMapping<T>;
-    original: { [key: string]: SqlTemplateArg };
+    keyMap: RootMapping;
+    original: RecordKeyType;
     expected: T;
   }
 
   type TestObj = {
     a: string;
     b?: number;
+    c?: {
+      d: number;
+      e?: {
+        f?: number;
+      };
+    };
   };
 
   const testData: TestDataItem<TestObj>[] = [
     {
       name: 'should rename keys of object based on keyMap',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { mapTo: 'b_k', type: MappingOption.Map },
-      },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.MAP },
+      }),
       original: { a_k: 'b', b_k: 1 },
       expected: { a: 'b', b: 1 },
     },
     {
       name: 'should ignore keys of object based on keyMap',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { mapTo: 'b_k', type: MappingOption.Ignore },
-      },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.IGNORE },
+      }),
       original: { a_k: 'b', b_k: 1 },
       expected: { a: 'b' },
     },
     {
       name: 'should map keys of object based on keyMap (fromDB)',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { mapTo: 'b_k', type: MappingOption.OnlyFromDB },
-      },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.ONLY_FROM_DB },
+      }),
       original: { a_k: 'b', b_k: 1 },
       expected: { a: 'b', b: 1 },
     },
     {
       name: 'should ignore keys of object based on keyMap (toDB)',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { mapTo: 'b_k', type: MappingOption.OnlyToDB },
-      },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.ONLY_TO_DB },
+      }),
       original: { a_k: 'b', b_k: 1 },
       expected: { a: 'b' },
     },
     {
       name: 'should ignore keys of object on invalid keyMap',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
         b: { mapTo: 'b_k', type: 'asd' as any },
-      },
+      }),
       original: { a_k: 'b', b_k: 1 },
       expected: { a: 'b' },
     },
     {
-      name: 'should map keys to the same key of object on invalid mapTo',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b_k: { type: MappingOption.Map },
-      } as any,
+      name: 'should map keys to the same key of object on invalid mapTo, leaving out fields that are corrupt',
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b_k: { type: ProjectionType.MAP },
+      } as any),
       original: { a_k: 'b', b_k: 1 },
-      expected: { a: 'b', b_k: 1 } as any,
+      expected: { a: 'b' } as any,
     },
     {
       name: 'should ignore keys missing from obj',
-      keyMap: {
-        a: { mapTo: 'a_k', type: MappingOption.Map },
-        b: { mapTo: 'b_k', type: MappingOption.Map },
-      },
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.MAP },
+      }),
       original: { a_k: 'b' },
       expected: { a: 'b' },
     },
+    {
+      name: 'should enable embedded mappings back from db',
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.MAP },
+        c: embeddedMapping({
+          d: { mapTo: 'c_d_k', type: ProjectionType.MAP },
+        }),
+      }),
+      original: { a_k: 'b', c_d_k: 3 },
+      expected: { a: 'b', c: { d: 3 } },
+    },
+    {
+      name: 'should enable deep embedded mappings back from db',
+      keyMap: rootMapping({
+        a: { mapTo: 'a_k', type: ProjectionType.MAP },
+        b: { mapTo: 'b_k', type: ProjectionType.MAP },
+        c: embeddedMapping({
+          d: { mapTo: 'c_d_k', type: ProjectionType.MAP },
+          e: embeddedMapping({
+            f: { mapTo: 'c_e_f_k', type: ProjectionType.MAP },
+          }),
+        }),
+      }),
+      original: { a_k: 'b', c_d_k: 3, c_e_f_k: 4 },
+      expected: { a: 'b', c: { d: 3, e: { f: 4 } } },
+    },
   ];
-  testData.forEach(d =>
+  testData.forEach((d) =>
     it(d.name, () => {
-      expect(Object.keys(renameKeysFromDB(d.keyMap, d.original))).toEqual(Object.keys(d.expected));
       expect(renameKeysFromDB(d.keyMap, d.original)).toEqual(d.expected);
     }),
   );

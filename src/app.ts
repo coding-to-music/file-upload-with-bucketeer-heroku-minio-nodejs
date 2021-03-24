@@ -36,10 +36,14 @@ export const start = async ({ config, logger }: { config: Config; logger: Logger
     accessKeyId: config.storage.accessKeyId,
     secretAccessKey: config.storage.secretAccessKey,
     region: config.storage.region,
-    s3ForcePathStyle: true, // needed with minio?
-    signatureVersion: 'v4',
-    endpoint: new AWS.Endpoint(config.storage.url).href,
-    sslEnabled: false,
+    ...(config.aws.useMinIO
+      ? {
+          s3ForcePathStyle: true, // needed with minio?
+          signatureVersion: 'v4',
+          endpoint: new AWS.Endpoint(config.storage.url).href,
+          sslEnabled: false,
+        }
+      : {}),
   });
 
   const imageRepo = imageRepoSQLFactory({ queryService });

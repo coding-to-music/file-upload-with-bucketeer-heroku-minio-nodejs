@@ -92,6 +92,12 @@ const configObject = convict({
       default: 5 * 60,
       env: 'URL_EXPIRATION_SECONDS',
     },
+    useMinIO: {
+      doc: 'Use MinIO for local storage',
+      format: Boolean,
+      default: false,
+      env: 'USE_MINIO',
+    },
   },
 });
 

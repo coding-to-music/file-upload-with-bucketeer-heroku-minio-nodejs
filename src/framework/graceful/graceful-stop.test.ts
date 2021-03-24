@@ -77,27 +77,27 @@ describe('terminationHandlerFactory', () => {
       name: 'should exit with 1 if cleanup could not finish in time',
       expectedExitCode: 1,
       timeout: 10,
-      cleanup: () => delay(20),
+      cleanup: async () => delay(20),
       gracefulWrappers: [gracefulWrapperFactory()],
     },
     {
       name: 'should exit with 1 if cleanup and gracefulwrappers could not finish in time',
       expectedExitCode: 1,
       timeout: 10,
-      cleanup: () => delay(7),
-      gracefulWrappers: [gracefulWrapperFactory({ shutdown: () => delay(8) })],
+      cleanup: async () => delay(7),
+      gracefulWrappers: [gracefulWrapperFactory({ shutdown: async () => delay(8) })],
     },
     {
       name: 'should exit with 1 if gracefulwrapper could not finish in time',
       expectedExitCode: 1,
       timeout: 1,
-      gracefulWrappers: [gracefulWrapperFactory({ shutdown: () => delay(2) })],
+      gracefulWrappers: [gracefulWrapperFactory({ shutdown: async () => delay(2) })],
     },
     {
       name: 'should exit with 1 if gracefulwrapper could not finish in its own time',
       expectedExitCode: 1,
       timeout: 10,
-      gracefulWrappers: [gracefulWrapperFactory({ shutdown: () => delay(15), timeout: 1 })],
+      gracefulWrappers: [gracefulWrapperFactory({ shutdown: async () => delay(15), timeout: 1 })],
     },
   ];
 
@@ -118,7 +118,7 @@ describe('gracefulWrapperConsumerFactory', () => {
   });
 
   test('should initiate consumer shutdown', async () => {
-    const consumer = consumerFactory({ isProcessing: () => Promise.resolve(false) });
+    const consumer = consumerFactory({ isProcessing: async () => Promise.resolve(false) });
     const spy = jest.spyOn(consumer, 'stopReception');
 
     await gracefulWrapperConsumerFactory(consumer).shutdown();
@@ -128,10 +128,7 @@ describe('gracefulWrapperConsumerFactory', () => {
 
   test('should shutdown if no active requests are present', async () => {
     const consumer = consumerFactory({
-      isProcessing: jest
-        .fn()
-        .mockResolvedValue(false)
-        .mockResolvedValueOnce(true),
+      isProcessing: jest.fn().mockResolvedValue(false).mockResolvedValueOnce(true),
     });
     const spy = jest.spyOn(consumer, 'isProcessing');
 
