@@ -8,7 +8,7 @@
   "description": "file upload sample",
   "scripts": {
     "lint": "eslint src --ext .ts",
-    "build": "tsc && yarn copy-sql-files",
+    "build": "tsc",
     "test": "jest",
     "start": "node ./build/src/index.js",
     "migrate:dev:drop": "ts-node --require dotenv/config ./src/framework/database/migrate.ts --drop",
