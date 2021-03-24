@@ -39,7 +39,6 @@ migration:prod:
   stage: migration
   needs:
     - lint
-    - test
     - build
   only:
     refs:
@@ -61,7 +60,6 @@ deploy:heroku:
   image: docker:latest
   needs:
     - lint
-    - test
     - build
     - migration:prod
   stage: deploy:heroku
