@@ -18,4 +18,4 @@ COPY --from=builder /app/build /app/build
 
 EXPOSE 3000
 
-CMD ["node", "./build/src/index.js"]
+CMD ["node", "./build/index.js"]
