@@ -1,0 +1,124 @@
+stages:
+  - install
+  - lint-test-build
+  - migration
+  - deploy:heroku
+  - utilities
+
+# region: install
+install:
+  extends:
+    - .node_setup
+  only:
+    changes:
+      - yarn.lock
+  cache:
+    policy: push
+  stage: install
+  script: echo 'Warming the cache'
+
+lint:
+  extends:
+    - .node_setup
+  stage: lint-test-build
+  script:
+    - yarn lint
+  interruptible: true
+
+build:
+  extends:
+    - .node_setup
+  stage: lint-test-build
+  script:
+    - yarn build
+  interruptible: true
+
+migration:prod:
+  extends:
+    - .node_setup
+  stage: migration
+  needs:
+    - lint
+    - test
+    - build
+  only:
+    refs:
+      - master
+  variables:
+    POSTGRES_DB: db
+    POSTGRES_USER: user
+    POSTGRES_PASSWORD: password
+    POSTGRES_HOST_AUTH_METHOD: trust
+    NODE_TLS_REJECT_UNAUTHORIZED: 0
+    DATABASE_URL: $DATABASE_URL_MIGRATE_PROD
+  script:
+    - yarn run migrate:dev
+  interruptible: true
+
+deploy:heroku:
+  services:
+    - docker:dind
+  image: docker:latest
+  needs:
+    - lint
+    - test
+    - build
+    - migration:prod
+  stage: deploy:heroku
+  only:
+    refs:
+      - master
+  script:
+    - export REMOTE_APP_DEPLOY_IMAGE=${CI_REGISTRY_IMAGE}:master
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker build . --pull --tag $REMOTE_APP_DEPLOY_IMAGE
+    - docker push $REMOTE_APP_DEPLOY_IMAGE
+
+    - docker tag $REMOTE_APP_DEPLOY_IMAGE $HEROKU_REGISTRY/$APP_NAME/web || true
+    - echo $HEROKU_API_KEY_DEV | docker login --username=_ --password-stdin $HEROKU_REGISTRY
+    - docker push $HEROKU_REGISTRY/$APP_NAME/web
+    - docker run --rm -e HEROKU_API_KEY=$HEROKU_API_KEY_DEV wingrunr21/alpine-heroku-cli container:release web --app $APP_NAME
+
+.node_setup:
+  image: node:12.18.3
+  cache:
+    policy: pull
+    key:
+      files:
+        - yarn.lock
+    paths:
+      - node_modules/
+      - 'api/**/node_modules'
+      - 'apps/**/node_modules'
+      - 'packages/*/node_modules'
+  before_script:
+    - |
+      # Utils
+      function section() {
+        local section_name=$1
+        local header=$2
+        shift 2
+        echo -e "section_start:$(date +%s):${section_name}\r\e[0K${header}"
+        "$@"
+        echo -e "section_end:$(date +%s):${section_name}\r\e[0K"
+      }
+    - section yarn_install "Yarn Install" yarn install --frozen-lockfile
+
+drop-db:prod:
+  extends:
+    - .node_setup
+  stage: utilities
+  when: manual
+  only:
+    refs:
+      - master
+  variables:
+    POSTGRES_DB: db
+    POSTGRES_USER: user
+    POSTGRES_PASSWORD: password
+    POSTGRES_HOST_AUTH_METHOD: trust
+    NODE_TLS_REJECT_UNAUTHORIZED: 0
+    DATABASE_URL: $DATABASE_URL_MIGRATE_PROD
+  script:
+    - yarn run migrate:dev:drop
+  interruptible: true
