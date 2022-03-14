@@ -1,0 +1,11 @@
+{
+  "/api/*": {
+    "target": "https://file-upload-backend-poc.herokuapp.com/",
+    "pathRewrite": {
+      "^/api": ""
+    },
+    "secure": false,
+    "logLevel": "debug",
+    "changeOrigin": true
+  }
+}

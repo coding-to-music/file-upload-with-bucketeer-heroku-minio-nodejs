@@ -1,0 +1,51 @@
+<div class="page-container">
+  <div class="row">
+    <div class="col-sm-6">
+      <form class="add-image-form" (ngSubmit)="submitImage()">
+        <div class="row">
+          <div class="col-12">
+            <div class="form-group row">
+              <label class="col-sm-3 col-form-label" for="title">Title of the picture</label>
+              <input class="col-sm-9 form-control" name="title" id="title" type="text" [(ngModel)]="imageTitle">
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12">
+            <input #fileUpload class="d-none m-1" type="file" placeholder="Browse Files"
+              (change)="fileChangeEvent($event)">
+            <div class="row justify-content-between">
+              <button type="button" class="btn btn-info" (click)="fileUpload.click()">Upload Image</button>
+              <button type="submit" class="btn btn-primary">Submit Image</button>
+            </div>
+            <div class="row">
+              <div class="col-sm-4">
+                <image-cropper [imageChangedEvent]="imageChangedEvent" [aspectRatio]="1/1" [maintainAspectRatio]="true"
+                  [containWithinAspectRatio]="true" format="png" [roundCropper]="true"
+                  (imageCropped)="imageCropped($event)">
+                </image-cropper>
+              </div>
+              <div *ngIf="!!croppedImage" class="col-sm-8 align-items-center">
+                <img class="image-preview" [src]="croppedImage" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="col-sm-6">
+      <ng-container *ngIf="images.length">
+        <div *ngFor="let image of images" class="w-100 my-2 p-3 bg-light rounded">
+          <div class="row">
+            <div class="col-sm-5 d-flex align-items-center">
+              {{ image.title }}
+            </div>
+            <div class="col-sm-7 d-flex align-items-center">
+              <img class="list-image" [src]="image.imageURL" />
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
