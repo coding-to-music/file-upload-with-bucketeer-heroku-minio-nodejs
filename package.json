@@ -1,8 +1,8 @@
 {
-  "name": "file-upload-sample",
+  "name": "file-upload-with-bucketeer-heroku-minio-nodejs",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "git@gitlab.com:brezodani/file-upload-poc.git",
+  "repository": "git@github.com:coding-to-music/file-upload-with-bucketeer-heroku-minio-nodejs.git",
   "license": "MIT",
   "private": true,
   "description": "file upload sample",
