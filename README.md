@@ -98,6 +98,20 @@ http://127.0.0.1:9000/minio/login
 docker-compose up
 ```
 
+# stop the postgres server
+
+```java
+docker-compose down
+```
+
+Output:
+
+```java
+Removing file-upload-with-bucketeer-heroku-minio-nodejs_postgres_1 ... done
+Removing file-upload-with-bucketeer-heroku-minio-nodejs_minio_1    ... done
+Removing network file-upload-with-bucketeer-heroku-minio-nodejs_default
+```
+
 ## client/proxy.json
 
 Set to the Heroku app name
