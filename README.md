@@ -12,8 +12,49 @@ Frontend https://gitlab.com/file-upload-sample/file-upload-sample-frontend
 
 Backend https://gitlab.com/brezodani/file-upload-poc
 
-How to Upload Files Using the Bucketeer Addon on Heroku, MinIO, and Node.js
+# How to run
 
+## Secrets and env variables
+
+.env
+
+```java
+AWS_ACCESS_KEY_ID=AKIARVGPJVYVNENDWXOX
+AWS_SECRET_ACCESS_KEY=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
+STORAGE_REGION=eu-west-1
+STORAGE_BUCKET_NAME=bucketeer-f5f99030-5f38-4de2-a2c4-5c1205f3fb0a
+USE_MINIO=FALSE
+```
+
+client/proxy.json
+
+Set to the Heroku app name
+
+```java
+# client/proxy.json
+
+    "target": "https://file-upload-backend-poc.herokuapp.com/",
+```
+
+## Server
+
+```java
+
+```
+
+## Client
+
+```java
+
+```
+
+## Heroku
+
+```java
+
+```
+
+## How to Upload Files Using the Bucketeer Addon on Heroku, MinIO, and Node.js
 
 File uploading is one of the most essential features of web development. And yet, it could be really time and energy-consuming if you aren’t careful enough. Also, debugging why your file isn’t uploaded to that AWS S3 bucket is a pretty tough thing to do.
 
@@ -30,6 +71,7 @@ So I started to plan what I wanted to achieve.
 A standard way to do this in this case is to create an endpoint on the backend side where the frontend could get a pre-signed URL, and then the frontend would use that pre-signed URL to actually upload the file itself.
 
 # Implementing our backend for file upload with Fastify
+
 I will use a basic Fastify-based backend skeleton, including a PostgreSQL database. It is not in this post’s scope to explain this skeleton’s structure or to show how to connect the database, so I will focus on the file upload.
 
 The plan is to create a simple web application where we can upload images with a title and then list these images.
@@ -51,7 +93,6 @@ Let’s set up AWS in our app.ts. Import AWS in the following way:
 ```java
 import * as AWS from 'aws-sdk';
 ```
-
 
 And in our start function:
 
@@ -85,7 +126,6 @@ export interface StorageService {
  createPublicBucketIfNotExists(bucket: string): Promise<void>;
 }
 ```
-
 
 Here we construct the interface of our service, which includes the mentioned getSignedURLForUpload method, as well as the createPublicBucketIfNotExists (more on this later).
 
@@ -137,7 +177,7 @@ createPublicBucketIfNotExists: async (bucket) => {
        }
      ]
    }`;
- 
+
    const bucketExists = await (async () => {
      try {
        await s3.headBucket({ Bucket: bucket }).promise();
@@ -150,11 +190,11 @@ createPublicBucketIfNotExists: async (bucket) => {
        throw e;
      }
    })();
- 
+
    if (!bucketExists) {
      await s3.createBucket({ Bucket: bucket }).promise();
    }
- 
+
    // Set CORS
    try {
      await s3
@@ -179,7 +219,7 @@ createPublicBucketIfNotExists: async (bucket) => {
        throw error;
      }
    }
- 
+
    // Set public read
    await s3
      .putBucketPolicy({
@@ -189,7 +229,6 @@ createPublicBucketIfNotExists: async (bucket) => {
      .promise();
  },
 ```
-
 
 Now, we define a bucket policy. Here we allow everyone to put files into and get files from our bucket. Of course, you can define a more strict policy, but in our case, we don’t really need anything strict regarding the bucket policy.
 
@@ -204,12 +243,12 @@ Now we have everything we need regarding the storage service, except we have yet
  await storageService.createPublicBucketIfNotExists(config.storage.bucketName);
 ```
 
-
 As I have mentioned before, the urlExpirationSeconds also comes from our config file.
 
 So now we have a storage service capable of creating a bucket and getting a pre-signed URL. So far, so good.
 
 # Creating our necessary services
+
 As I have mentioned before, my plan was to create a web app where we can add an image with a title and upload that image, with an images list in place as well.
 
 In order to have that, we need to create all the necessary endpoints our frontend would need.
@@ -222,7 +261,7 @@ First, define the ImageWithTitle object. For that, create an image.ts file under
 export type Resource = {
  id: string;
 };
- 
+
 export type ImageWithTitle = Resource & {
  title: string;
  imageURL: string;
@@ -230,43 +269,41 @@ export type ImageWithTitle = Resource & {
 };
 ```
 
-
 Obviously, we want to have methods for putting into and getting out ImageWithTitle objects from our database. For that, we create an image service under the same image folder:
 
 ```java
 import { v4 } from 'uuid';
 import { AddImageOptions, ImageWithTitle } from './image';
 import { ImageRepo } from './image-repo';
- 
+
 export interface ListResult<T> {
  items: T[];
  count: number;
 }
- 
+
 export interface ImageService {
  create(cluster: AddImageOptions): Promise<void>;
  getAll(params: { skip: number; limit: number }): Promise<ListResult<ImageWithTitle>>;
 }
- 
+
 export const imageServiceFactory = ({ imageRepo }: { imageRepo: ImageRepo }): ImageService => {
  const getAll: ImageService['getAll'] = async (params): Promise<ListResult<ImageWithTitle>> => {
    const [count, items] = await Promise.all([imageRepo.countAll(), imageRepo.getAll(params)]);
- 
+
    return { count, items };
  };
- 
+
  const create: ImageService['create'] = async (image): Promise<void> => {
    const id = v4();
    return imageRepo.addResource({ ...image, id });
  };
- 
+
  return {
    create,
    getAll,
  };
 };
 ```
-
 
 We created a create and a getAll method, and these are all we need. imageRepo is the database layer, but again it’s not in this post’s scope to explain how we connect our SQL database into our node backend.
 
@@ -279,12 +316,12 @@ Our get pre-signed URL use case looks like this:
 ```java
 import { StorageService } from '../../framework/storage/storage-service';
 import { AsyncUseCase } from '../../framework/use-case/use-case';
- 
+
 export type ImageGetURLInput = { fileType: string; extension: string };
 export type ImageGetURLOutput = { uploadURL: string };
- 
+
 export type ImageGetURLUseCase = AsyncUseCase<ImageGetURLInput, ImageGetURLOutput>;
- 
+
 export const imageGetURLUseCaseFactory = ({
  storageService,
  bucketName,
@@ -301,7 +338,6 @@ export const imageGetURLUseCaseFactory = ({
 };
 ```
 
-
 The use case gets an input with a fileType, which is eventually the content type. Inside the use case, we call the getSignedURLForUpload from the newly created storage service, and we pass the bucketName, the content type, and a random number from 0 to 1000, which would be the image’s key. In this case, this is the last segment of the image’s upload URL.
 
 Now, we can construct the endpoint, which would call this use case we just created. As I have already pointed out, endpoints don’t contain any logic in this backend; they just get the inputs from the API call and pass them forward to the use cases.
@@ -313,10 +349,10 @@ import { EndpointMethods } from '../../domain/endpoint/endpoint-methods';
 import { imageResponseOAComponent } from '../../domain/image/image.oa-component';
 import { EmptyObject } from '../../framework/object-types/empty-object';
 import { ImageGetURLUseCase } from '../../use-cases/image/image-get-url.use-case';
- 
+
 export type ImageGetURLOutput = { uploadURL: string };
 export type ImageGetURLRequestQuery = { fileType: string };
- 
+
 export const imageGetURLEndpointFactory = ({
  imageGetURLUseCase,
 }: {
@@ -337,12 +373,11 @@ export const imageGetURLEndpointFactory = ({
  handler: async (request) => {
    const fileType = request.query.fileType;
    const response = await imageGetURLUseCase({ fileType });
- 
+
    return { status: 200, response };
  },
 });
 ```
-
 
 As one can see, there are a few types and OA responses imported. I do not want to get into those, as they are not strongly related to our file upload problem.
 
@@ -360,7 +395,6 @@ export const addImageUseCaseFactory = ({ imageService }: { imageService: ImageSe
 };
 ```
 
-
 Here we just add the ImageWithTitle object to our database. The corresponding endpoint calls the use case without any other logic.
 
 Lastly, let’s see the “List images use case,” where we call the getAll method from our imageService. It contains server-side paging, but we do not really use it in our file upload sample (I strongly advise you to always implement server-side paging if you are dealing with any kind of listing, especially when your app has multiple lists).
@@ -373,7 +407,7 @@ export const listImagesUseCaseFactory = ({ imageService }: { imageService: Image
    skip: input.skip,
    limit: input.limit,
  });
- 
+
  return {
    count,
    items,
@@ -381,20 +415,17 @@ export const listImagesUseCaseFactory = ({ imageService }: { imageService: Image
 };
 ```
 
-
-
-
 Now we have just two things left to finish our sample backend. First, we have to import everything to the app.ts.
 
 ```java
  const imageRepo = imageRepoSQLFactory({ queryService });
- 
+
  const transactionService = sqlTransactionServiceFactory({ pool });
- 
+
  const imageService = imageServiceFactory({ imageRepo });
- 
+
  const statusEndpoint = statusEndpointFactory();
- 
+
  const imageGetUrlEndpoint = imageGetURLEndpointFactory({
    imageGetURLUseCase: transactedUseCaseFactory({
      useCase: imageGetURLUseCaseFactory({
@@ -404,7 +435,7 @@ Now we have just two things left to finish our sample backend. First, we have to
      transactionService,
    }),
  });
- 
+
  const listImagesEndpoint = listImagesEndpointFactory({
    listImagesUseCase: transactedUseCaseFactory({
      useCase: listImagesUseCaseFactory({
@@ -413,7 +444,7 @@ Now we have just two things left to finish our sample backend. First, we have to
      transactionService,
    }),
  });
- 
+
  const addImageEndpoint = addImageEndpointFactory({
    addImageUseCase: transactedUseCaseFactory({
      useCase: addImageUseCaseFactory({
@@ -422,16 +453,15 @@ Now we have just two things left to finish our sample backend. First, we have to
      transactionService,
    }),
  });
- 
+
  const endpoints = [statusEndpoint, imageGetUrlEndpoint, listImagesEndpoint, addImageEndpoint];
 ```
-
 
 And second, we need to define a MinIO instance next to the Postgres instance in our docker-compose.yml:
 
 ```java
 version: '3.7'
- 
+
 services:
  postgres:
    image: postgres:13.0
@@ -441,7 +471,7 @@ services:
      POSTGRES_USER: user
      POSTGRES_DB: db
      POSTGRES_PASSWORD: password
- 
+
  minio:
    image: minio/minio:RELEASE.2021-03-17T02-33-02Z
    ports:
@@ -451,7 +481,6 @@ services:
      MINIO_SECRET_KEY: secret1337
    command: 'minio server /export'
 ```
-
 
 With this, if we run docker-compose up in the terminal, we will have a MinIO running under port 9000. We can set the MinIO’s values to default values in our config files, so if we do not set our S3 credentials in the config (in .env for instance), it will fall back to our local MinIO.
 
@@ -490,8 +519,8 @@ storage: {
  },
 ```
 
-
 # Creating our frontend
+
 It’s time to turn our heads to the frontend side of this mini project.
 
 We will use a basic ng new app with SCSS styling. I wanted to use bootstrap, as it is really easy to use, and our app won’t look completely awful, but I should warn you in advance that styling isn’t that important for creating our proof of concept.
@@ -501,6 +530,7 @@ In order to start our frontend development, we should create the new Angular app
 ```java
 ng new file-upload-frontend --style scss
 ```
+
 This will create the app and install all the initial modules. Next, go into our newly created folder and install a few libraries we will use:
 
 ```java
@@ -516,7 +546,7 @@ import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { ImageCropperModule } from 'ngx-image-cropper';
 import { AppComponent } from './app.component';
- 
+
 @NgModule({
  declarations: [AppComponent],
  imports: [BrowserModule, ImageCropperModule, HttpClientModule, FormsModule],
@@ -525,13 +555,11 @@ import { AppComponent } from './app.component';
 export class AppModule {}
 ```
 
-
 We also added bootstrap, so let’s import that into our styles.scss:
 
 ```java
 @import "../node_modules/bootstrap/scss/bootstrap.scss";
 ```
-
 
 Now we can use all the built-in classes bootstrap provides. It is time to write some HTML into our app.component.html.
 
@@ -590,9 +618,9 @@ import { HttpClient } from '@angular/common/http';
 import { dataURItoFile } from './utils/dataURI-to-file';
 import { Observable, Subscription } from 'rxjs';
 import { Image, ListResponse } from './utils/image';
- 
+
 const apiURL = '/api';
- 
+
 @Component({
  selector: 'app-root',
  templateUrl: './app.component.html',
@@ -606,20 +634,20 @@ export class AppComponent implements {
  images: Image[] = [];
  getPresignedURLSubscription$: Subscription;
  uploadImageSubscription$: Subscription;
- 
+
  constructor(private http: HttpClient) {}
- 
+
  fileChangeEvent(event: unknown): void {
    this.imageChangedEvent = event;
  }
- 
+
  async imageCropped(event: ImageCroppedEvent): Promise<Subscription | void> {
    this.croppedImage = event.base64;
    if (!!this.croppedImage) {
      return await this.prepareImage(this.croppedImage);
    }
  }
- 
+
  private getPresignedUrl(
    extension: string,
    fileType: string
@@ -632,7 +660,7 @@ export class AppComponent implements {
      params,
    });
  }
- 
+
  private uploadImage(file: File): void {
    this.uploadImageSubscription$ = this.http
      .put<void>(this.imageURL, file, {
@@ -640,7 +668,7 @@ export class AppComponent implements {
      })
      .subscribe();
  }
- 
+
  private async prepareImage(croppedImage: string): Promise<void> {
    const imageData = await dataURItoFile(croppedImage);
    this.getPresignedURLSubscription$ = this.getPresignedUrl(
@@ -654,7 +682,6 @@ export class AppComponent implements {
 }
 ```
 
-
 Let’s go one by one. We already touched the fileChangeEvent(), where we pass the file input event to the variable named imageChangedEvent.
 
 The imageCropped method is called whenever the image-cropper outputs a new image - so when the user crops the selected image. All this method does is call prepareImage() method with the event.base64.
@@ -663,7 +690,7 @@ Before our first API call, we have to convert our base64 string (image-cropper�
 
 ```java
 import * as fileType from 'file-type/browser';
- 
+
 export async function dataURItoFile(
  dataURI: string
 ): Promise<{ file: File; extension: string; mimeType: string }> {
@@ -672,11 +699,11 @@ export async function dataURItoFile(
  const bstr = atob(arr[1]);
  let n = bstr.length;
  const u8arr = new Uint8Array(n);
- 
+
  while (n--) {
    u8arr[n] = bstr.charCodeAt(n);
  }
- 
+
  const file = new File([u8arr], 'image.png', { type: mime });
  const { extension, mimeType } = await fileType
    .fromBuffer(u8arr)
@@ -684,7 +711,6 @@ export async function dataURItoFile(
  return { file, extension, mimeType };
 }
 ```
-
 
 With the help of this function, we have a file type with a mimeType as well. Now we can call the first endpoint we need, where we get the pre-signed URL.
 
@@ -700,7 +726,6 @@ return await s3.getSignedUrlPromise('putObject', {
    });
 ```
 
-
 Basically, we implemented the file upload on our frontend. Whenever we crop an image with the help of the image-cropper, our app calls the get pre-signed URL endpoint where it gets an URL, and then it uploads the converted file onto that URL.
 
 We could stop right here, check our bucket if the file is there, and live happily ever after. But I wanted this sample project to be a whole, so we will keep going and connect the add image endpoint as well as the list images endpoint.
@@ -709,12 +734,12 @@ For submitting the image, add the following to the app.component.ts:
 
 ```java
 addImageSubscription$: Subscription;
- 
+
 submitImage(): void {
    this.addImageSubscription$ = this.addImage().subscribe();
    this.croppedImage = '';
  }
- 
+
  private addImage(): Observable<void> {
    const imageBody = {
      title: this.imageTitle,
@@ -724,7 +749,6 @@ submitImage(): void {
  }
 ```
 
-
 With these, if we click the submit button, we will call the add image endpoint, and eventually, it will save the image title and URL into our database.
 
 Finally, we can list the images we’ve already uploaded:
@@ -733,19 +757,19 @@ Finally, we can list the images we’ve already uploaded:
  ngOnInit() {
    this.triggerListImages();
  }
- 
+
 submitImage(): void {
    this.addImageSubscription$ = this.addImage().subscribe();
    this.croppedImage = '';
    this.triggerListImages();
 }
- 
+
 private listImages(): Observable<ListResponse<Image>> {
    return this.http.get<ListResponse<Image>>(
      `${apiURL}/images?skip=0&limit=100`
    );
  }
- 
+
  private triggerListImages(): void {
    this.listImagesSubscription$ = this.listImages().subscribe(
      (images) => (this.images = images.items)
@@ -753,10 +777,9 @@ private listImages(): Observable<ListResponse<Image>> {
  }
 ```
 
-
 And we also need a bit more HTML. After the first col-sm-6 div element, add the following:
 
-```java
+````java
 <div class="col-sm-6">
      <ng-container *ngIf="images.length">
        <div *ngFor="let image of images" class="w-100 my-2 p-3 bg-light rounded">
@@ -778,13 +801,15 @@ Let’s start things up!
 
 ```java
 npm run start:local
-```
+````
+
 And on the backend:
 
 ```java
 docker-compose up -d
 yarn start:dev
 ```
+
 Type localhost:4200 into the browser, and you’ll probably see a blank white screen with a console error message:
 
 ```java
@@ -795,21 +820,17 @@ As per many StackOverflow and GitHub issues it could be solved by passing these 
 
 ```java
 import * as buffer from 'buffer';
- 
+
 ((window as unknown) as Record<string, unknown>).global = window;
 global.Buffer = global.Buffer || buffer.Buffer;
 ```
 
-
 That’s it. We can now upload images onto our MinIO bucket! For example, this screenshot about the usage share of desktop browsers from Wikipedia:
-
-
 
 After clicking the submit button, we will see the image on the right side of the screen:
 
-
-
 # Connecting Bucketeer to Heroku
+
 Although it is great that we can upload files into a bucket running on Docker on our machine, usually we are not satisfied with this. We want cloud-based storage for our application.
 
 As I have mentioned in the introduction, I recently used Bucketeer on Heroku for storing profile pictures. So let’s set up Bucketeer for our sample application!
@@ -820,13 +841,9 @@ Assuming we already have a Heroku application up and running, let’s see how to
 
 First, head over to the resources tab on the application’s dashboard on Heroku, and search for Bucketeer on the add-ons input as below.
 
-
-
 After you click on it, you will be prompted to select a plan, we will use the default Hobby plan in our case. Heroku sets Bucketeer up, and you can already see the config variables on the settings tab.
 
 We must also add the AWS_ACCESS_KEY_ID, the AWS_SECRET_ACCESS_KEY, the STORAGE_BUCKET_NAME, and the STORAGE_REGION variables with the corresponding values, as we defined these variables in our config file so our app will search for these names in order to get the storage credentials. You can define these config variables with any key you like, but be aware that the variables generated by Heroku for Bucketeer might not have the same key names you have prepared for.
-
-
 
 We’re done! We can try this if we take these secrets and pass them onto our .env file:
 
@@ -842,6 +859,7 @@ view rawgistfile1.env hosted with ❤ by GitHub
 Remember that we used the USE_MINIO config variable to switch between local MiniIO and deployed Bucketeer.
 
 # Conclusion
+
 I hope that this guide will help you implement a file upload service in your application. I think we have touched almost everything you would need in a simple use case.
 
 You can also look up the repositories on Gitlab:
@@ -849,6 +867,3 @@ You can also look up the repositories on Gitlab:
 Frontend https://gitlab.com/file-upload-sample/file-upload-sample-frontend
 
 Backend https://gitlab.com/brezodani/file-upload-poc
-
-
-
