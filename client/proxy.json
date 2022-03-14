@@ -1,6 +1,6 @@
 {
   "/api/*": {
-    "target": "https://file-upload-backend-poc.herokuapp.com/",
+    "target": "https://file-upload-with-bucketeer.herokuapp.com/",
     "pathRewrite": {
       "^/api": ""
     },

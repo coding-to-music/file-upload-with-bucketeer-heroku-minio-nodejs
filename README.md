@@ -2,6 +2,8 @@
 
 https://github.com/coding-to-music/file-upload-with-bucketeer-heroku-minio-nodejs
 
+https://file-upload-with-bucketeer.herokuapp.com/
+
 By Dániel Brezovcsik https://gitlab.com/brezodani
 
 April 20, 2021
@@ -19,14 +21,14 @@ Backend https://gitlab.com/brezodani/file-upload-poc
 .env
 
 ```java
-AWS_ACCESS_KEY_ID=AKIARVGPJVYVNENDWXOX
-AWS_SECRET_ACCESS_KEY=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
-STORAGE_REGION=eu-west-1
-STORAGE_BUCKET_NAME=bucketeer-f5f99030-5f38-4de2-a2c4-5c1205f3fb0a
+AWS_ACCESS_KEY_ID=KEYHEREJVYVNENDWXOX
+AWS_SECRET_ACCESS_KEY=SECRETHEREQpsNdifV4zm03WKHKPySrJcyIGSBS3Q
+STORAGE_REGION=us-east-1
+STORAGE_BUCKET_NAME=bucketeer-1234530-5f38-4de2-a2c4-5c1205f3fb0a
 USE_MINIO=FALSE
 ```
 
-client/proxy.json
+## client/proxy.json
 
 Set to the Heroku app name
 
@@ -34,6 +36,12 @@ Set to the Heroku app name
 # client/proxy.json
 
     "target": "https://file-upload-backend-poc.herokuapp.com/",
+```
+
+```java
+# client/proxy-local.json
+
+    "target": "http://localhost:3000",
 ```
 
 ## Server
@@ -69,6 +77,12 @@ Commit your code to the repository and deploy it to Heroku using Git.
 git add .
 git commit -am "add heroku"
 git push heroku main
+```
+
+## view Heroku logs
+
+```java
+heroku logs --tail
 ```
 
 ## Enable the Heroku add-on for enhanced metrics
@@ -859,7 +873,7 @@ docker-compose up -d
 yarn start:dev
 ```
 
-Type localhost:4200 into the browser, and you’ll probably see a blank white screen with a console error message:
+Type localhost:3000 into the browser, and you’ll probably see a blank white screen with a console error message:
 
 ```java
 Uncaught ReferenceError: global is not defined
