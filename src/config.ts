@@ -23,7 +23,7 @@ const configObject = convict({
     url: {
       doc: 'Database URL',
       format: String,
-      default: 'postgresql://user:password@localhost:5432/db',
+      default: 'postgresql://user:password@localhost:1432/db',
       env: 'DATABASE_URL',
     },
     databaseUseSSL: {
@@ -75,7 +75,7 @@ const configObject = convict({
     region: {
       doc: 'Storage region',
       format: String,
-      default: 'eu-west-1',
+      default: 'us-east-1',
       env: 'STORAGE_REGION',
     },
     url: {

@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres:13.0
     ports:
-      - '5432:5432'
+      - '1432:1432'
     environment:
       POSTGRES_USER: user
       POSTGRES_DB: db

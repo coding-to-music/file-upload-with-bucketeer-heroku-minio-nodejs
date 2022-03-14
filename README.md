@@ -28,6 +28,76 @@ STORAGE_BUCKET_NAME=bucketeer-1234530-5f38-4de2-a2c4-5c1205f3fb0a
 USE_MINIO=FALSE
 ```
 
+## kill-port as needed
+
+```java
+
+# node server
+kill-port 3000
+
+# Angular Client
+kill-port 4200
+
+# postgres
+kill-port 5432
+```
+
+## see what is running on a particular port
+
+```java
+ss -ltup
+
+netstat -ltup
+
+systemctl --type=service --state=running
+
+systemctl --type=service --state=active
+```
+
+## ports for postres
+
+```java
+
+# docker-compose.yml
+
+    image: postgres:13.0
+    ports:
+      - '1432:1432'
+
+# client/src/database/isolate-postgres.ts
+    port: rootConnectionData.port || '1432',
+
+# client/src/config.ts
+      default: 'postgresql://user:password@localhost:1432/db',
+
+    default: 3000,
+    env: 'PORT',
+  },
+  domainSwagger: {
+    doc: 'Domain name for swagger.',
+    default: 'localhost:3000',
+
+    url: {
+      doc: 'Storage url',
+      format: String,
+      default: 'http://127.0.0.1:9000',
+      env: 'STORAGE_URL',
+
+```
+
+# local minio server
+
+```java
+http://127.0.0.1:9000/minio/login
+
+```
+
+## Start the postgres server
+
+```java
+docker-compose up
+```
+
 ## client/proxy.json
 
 Set to the Heroku app name
@@ -42,11 +112,17 @@ Set to the Heroku app name
 # client/proxy-local.json
 
     "target": "http://localhost:3000",
+
+# client/protractor.conf.js
+
+  baseUrl: 'http://localhost:4200/',
+
 ```
 
 ## Server
 
 ```java
+npm run start
 
 ```
 
@@ -57,7 +133,7 @@ cd client
 
 npm run start
 
-http://localhost:3000/
+http://localhost:4200/
 ```
 
 ## Create the app on heroku using the CLI
@@ -77,6 +153,36 @@ Commit your code to the repository and deploy it to Heroku using Git.
 git add .
 git commit -am "add heroku"
 git push heroku main
+```
+
+## Need to set the Heroku environment variables:
+
+Initially they are empty
+
+```java
+heroku config
+=== file-upload-with-bucketeer Config Vars
+
+```
+
+They are stored in .env
+
+```java
+AWS_ACCESS_KEY_ID=KEYHEREJVYVNENDWXOX
+AWS_SECRET_ACCESS_KEY=SECRETHEREQpsNdifV4zm03WKHKPySrJcyIGSBS3Q
+STORAGE_REGION=us-east-1
+STORAGE_BUCKET_NAME=bucketeer-1234530-5f38-4de2-a2c4-5c1205f3fb0a
+USE_MINIO=FALSE
+```
+
+```java
+heroku config:set DB_CONNECTION="mongodb+srv://<userid>:<password>@cluster0.zadqe.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+Setting DB_CONNECTION and restarting ⬢ file-upload-with-bucketeer... done, v5
+DB_CONNECTION: mongodb+srv://<userid>:<password>@cluster0.zadqe.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
+
+heroku config:set AWS_BUCKET_NAME="my-site-images-test"
+Setting AWS_BUCKET_NAME and restarting ⬢ file-upload-with-bucketeer... done, v6
+AWS_BUCKET_NAME: my-site-images-test
 ```
 
 ## view Heroku logs
@@ -545,7 +651,7 @@ services:
    command: 'minio server /export'
 ```
 
-With this, if we run docker-compose up in the terminal, we will have a MinIO running under port 9000. We can set the MinIO’s values to default values in our config files, so if we do not set our S3 credentials in the config (in .env for instance), it will fall back to our local MinIO.
+With this, if we run `docker-compose up` in the terminal, we will have a MinIO running under port 9000. We can set the MinIO’s values to default values in our config files, so if we do not set our S3 credentials in the config (in .env for instance), it will fall back to our local MinIO.
 
 ```java
 storage: {
@@ -873,7 +979,7 @@ docker-compose up -d
 yarn start:dev
 ```
 
-Type localhost:3000 into the browser, and you’ll probably see a blank white screen with a console error message:
+Type localhost:4200 into the browser, and you’ll probably see a blank white screen with a console error message:
 
 ```java
 Uncaught ReferenceError: global is not defined
