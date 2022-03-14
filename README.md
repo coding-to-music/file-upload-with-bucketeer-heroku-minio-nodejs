@@ -42,17 +42,66 @@ Set to the Heroku app name
 
 ```
 
-## Client
+## local development - client frontend
 
 ```java
+cd client
 
+npm run start
+
+http://localhost:3000/
 ```
 
-## Heroku
+## Create the app on heroku using the CLI
+
+app will be named `file-upload-with-bucketeer`
 
 ```java
-
+heroku apps:create file-upload-with-bucketeer
+Creating ⬢ file-upload-with-bucketeer... done
 ```
+
+### Deploy your application
+
+Commit your code to the repository and deploy it to Heroku using Git.
+
+```java
+git add .
+git commit -am "add heroku"
+git push heroku main
+```
+
+## Enable the Heroku add-on for enhanced metrics
+
+https://devcenter.heroku.com/articles/language-runtime-metrics-nodejs#getting-started
+
+```java
+heroku labs:enable "runtime-heroku-metrics" -a file-upload-with-bucketeer
+heroku labs:enable "nodejs-language-metrics" -a file-upload-with-bucketeer
+```
+
+```java
+heroku labs:enable "runtime-heroku-metrics" -a file-upload-with-bucketeer
+
+Enabling runtime-heroku-metrics for file-upload-with-bucketeer... done
+
+heroku labs:enable "nodejs-language-metrics" -a file-upload-with-bucketeer
+
+Enabling nodejs-language-metrics for file-upload-with-bucketeer... done
+```
+
+## Redeploy
+
+Once you have enabled the Enhanced Language Metrics feature re-deploy your application using an empty commit.
+
+```java
+git commit --allow-empty -m "Enable Node.js Language Metrics"
+git push heroku main
+```
+
+After a few minutes, you will begin receiving metrics which can be viewed via the Application Metrics tab.
+
+## change Node versions with NVM
 
 ## How to Upload Files Using the Bucketeer Addon on Heroku, MinIO, and Node.js
 
