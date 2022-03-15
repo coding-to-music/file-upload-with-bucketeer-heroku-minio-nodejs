@@ -10,11 +10,33 @@ services:
       POSTGRES_DB: db
       POSTGRES_PASSWORD: password
 
+
+volumes:
+  s3:
+
+services:
   minio:
-    image: minio/minio:RELEASE.2021-03-17T02-33-02Z
+    image: minio/minio:latest
+    volumes:
+      - s3:/data
     ports:
       - 9000:9000
     environment:
-      MINIO_ACCESS_KEY: key
-      MINIO_SECRET_KEY: secret1337
-    command: 'minio server /export'
+      - "MINIO_ACCESS_KEY=test-s3-access-key"
+      - "MINIO_SECRET_KEY=test-s3-secret-key"
+    command: "server /data"
+
+    # command: 'minio server /export'
+
+  createbuckets:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      sh -c '
+      sleep 3 &&
+      mc config host add s3 http://minio:9000 "test-s3-access-key" "test-s3-secret-key" &&
+      mc mb -p s3/blog &&
+      mc policy set download s3/blog &&
+      exit 0
+      '
