@@ -6,6 +6,9 @@
   "license": "MIT",
   "private": true,
   "description": "file upload sample",
+  "engines": {
+    "node": "16.x"
+  },
   "scripts": {
     "lint": "eslint src --ext .ts",
     "build": "tsc",
